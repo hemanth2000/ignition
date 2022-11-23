@@ -4,6 +4,7 @@ import numpy as np
 # Matrix with coefficients
 # F_y -> 1st row; M_z -> 2nd row; F_x -> 3rd row
 
+
 A = np.array(
     [
         [-22.1, 1011, 1078, 1.82, 0.208, 0, -0.354, 0.707, 0.028, 0, 14.8, 0.022, 0],
@@ -12,8 +13,10 @@ A = np.array(
     ]
 )
 
+
 alpha = np.arange(-15, 15, 0.1)
 F_z = 3.0  # Normal force per tire
+
 
 # Lateral Force
 C = 1.3
@@ -33,6 +36,7 @@ plt.xlabel("Slip angle (deg)")
 plt.ylabel("Lateral force (N)")
 plt.grid()
 plt.show()
+
 
 # Aligning Moment
 C = 2.4
