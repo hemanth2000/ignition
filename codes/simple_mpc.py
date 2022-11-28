@@ -26,8 +26,18 @@ x4 = ca.SX.sym("phi_dot")
 x5 = ca.SX.sym("X")
 x6 = ca.SX.sym("Y")
 
-x = ca.vertcat(x1, x2, x3, x4, x5, x6)  # Input vector
-u = ca.SX.sym("delta")  # Front steering angle
+x = ca.vertcat(x1, x2, x3, x4, x5, x6)  # input vector
+u = ca.SX.sym("delta")  # front steering angle
+
+vxf = x1  # front wheel velocity in x direction
+vyf = x2 + a * x4  # front wheel velocity in y direction
+vxr = x1  # rear wheel velocity in x direction
+vyr = x2 - b * x4  # rear wheel velocity in y direction
+
+vlf = vyf * ca.sin(u) + vxf * ca.cos(u)  # front wheel longitudinal velocity
+vlr = vxf  # rear wheel longitudinal velocity
+vcf = vyf * ca.cos(u) - vxf * ca.sin(u)  # front wheel lateral velocity
+vcr = vyf  # rear wheel lateral velocity
 
 Fxf = ca.SX.sym("Fxf")
 Fxr = ca.SX.sym("Fxr")
