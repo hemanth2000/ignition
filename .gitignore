@@ -3,3 +3,6 @@
 
 # reference papers
 papers
+
+# cache files
+__pycache__

@@ -1,19 +1,22 @@
 import casadi as ca
 import matplotlib.pyplot as plt
+from utils.tiremodel import get_lateral_force, get_longitudinal_force
 
 # Simulation parameters
-t_sim = 100  # Total simulation time in seconds
-t_step = 0.1  # Time step in seconds
+t_step = 0.05  # Time step in seconds
 control_horizon = 3  # Control horizon : No of time steps optimal control is estimated
-prediction_horizon = 10  # Prediction window
-N = int(t_sim / t_step)
+prediction_horizon = 7  # Prediction window
+N = prediction_horizon
+
+Q = ca.DM([[200, 0], [0, 75]])  # State weighing matrix
+R = 150  # Input weighing matrix
 
 # Vehicle parameters
 a = 0.3  # Distance between front wheel and COM in meters
 b = 0.7  # Distance between rear wheel and COM in meters
-m = 1  # Mass of car in tons
+m = 2.05  # Mass of car in tons
 g = 9.81  # Gravity
-I = 2  # Moment of inertia
+I = 3.344  # Moment of inertia
 Fz = m * g  # Total normal force from ground
 Fzf = b * Fz / (2 * (a + b))  # Normal force on front wheels
 Fzr = a * Fz / (2 * (a + b))  # Normal force on rear wheels
@@ -39,10 +42,20 @@ vlr = vxf  # rear wheel longitudinal velocity
 vcf = vyf * ca.cos(u) - vxf * ca.sin(u)  # front wheel lateral velocity
 vcr = vyf  # rear wheel lateral velocity
 
-Fxf = ca.SX.sym("Fxf")
-Fxr = ca.SX.sym("Fxr")
-Fyf = ca.SX.sym("Fyf")
-Fyr = ca.SX.sym("Fyr")
+alpha_f = ca.atan(vcf / vlf)
+alpha_r = ca.atan(vcr / vlr)
+slip_ratio_f = 0.9
+slip_ratio_r = 0.9
+
+Flf = get_longitudinal_force(Fzf, slip_ratio_f)
+Fcf = get_lateral_force(Fzf, alpha_f)
+Flr = get_longitudinal_force(Fzr, slip_ratio_r)
+Fcr = get_lateral_force(Fzr, alpha_r)
+
+Fxf = Flf * ca.cos(u) - Fcf * ca.sin(u)
+Fyf = Flf * ca.sin(u) + Fcf * ca.cos(u)
+Fxr = Flr
+Fyr = Fcr
 
 # Model equations
 xdot = ca.vertcat(
@@ -76,8 +89,8 @@ ubg = []
 for k in range(N):
     Uk = ca.SX.sym("U_" + str(k))
     w += [Uk]
-    lbw += [-ca.inf]
-    ubw += [ca.inf]
+    lbw += [-ca.pi / 18]
+    ubw += [ca.pi / 18]
     w0 += [0]
 
     Fk = F(x0=Xk, p=Uk)

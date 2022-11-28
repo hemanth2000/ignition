@@ -15,6 +15,7 @@ A = np.array(
 
 
 def get_lateral_force(F_z, alpha, gamma=4, plot=False):
+    alpha = alpha / np.pi * 180
     # Lateral Force
     C = 1.3
     D = A[0, 0] * F_z**2 + A[0, 1] * F_z
@@ -38,7 +39,7 @@ def get_lateral_force(F_z, alpha, gamma=4, plot=False):
 
 
 def get_aligning_moment(F_z, alpha, gamma=4, plot=False):
-
+    alpha = alpha / np.pi * 180
     # Aligning Moment
     C = 2.4
     D = A[1, 0] * F_z**2 + A[1, 1] * F_z
@@ -59,19 +60,19 @@ def get_aligning_moment(F_z, alpha, gamma=4, plot=False):
     return M_z
 
 
-# Longitudinal Force
-def get_longitudinal_force(F_z, alpha, plot=False):
+def get_longitudinal_force(F_z, slip_ratio, plot=False):
+    # Longitudinal Force
     C = 1.65
     D = A[2, 0] * F_z**2 + A[2, 1] * F_z
     BCD = (A[2, 2] * F_z**2 + A[2, 3] * F_z) / np.exp(A[2, 4] * F_z)
     B = BCD / (C * D)
     E = A[2, 5] * F_z**2 + A[2, 6] * F_z + A[2, 7]
 
-    phi = (1 - E) * alpha + E / B * np.arctan(B * alpha)
+    phi = (1 - E) * slip_ratio + E / B * np.arctan(B * slip_ratio)
     F_x = D * np.sin(C * np.arctan(B * phi))
     if plot:
         plt.figure(3)
-        plt.plot(alpha, F_x)
+        plt.plot(slip_ratio, F_x)
         plt.xlabel("Slip angle (deg)")
         plt.ylabel("Aligning Moment (Nm)")
         plt.grid()
