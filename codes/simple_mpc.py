@@ -18,6 +18,7 @@ I = 3.344  # Moment of inertia
 Fz = m * g  # Total normal force from ground
 Fzf = b * Fz / (2 * (a + b))  # Normal force on front wheels
 Fzr = a * Fz / (2 * (a + b))  # Normal force on rear wheels
+mu = 0.85
 
 # Model variables
 x1 = ca.SX.sym("x_dot")
@@ -45,10 +46,10 @@ alpha_r = ca.atan(vcr / vlr)
 slip_ratio_f = 0  # Assumption
 slip_ratio_r = 0  # Assumption
 
-Flf = get_longitudinal_force(Fzf, slip_ratio_f)
-Fcf = get_lateral_force(Fzf, alpha_f)
-Flr = get_longitudinal_force(Fzr, slip_ratio_r)
-Fcr = get_lateral_force(Fzr, alpha_r)
+Flf = get_longitudinal_force(mu * Fzf, slip_ratio_f)
+Fcf = get_lateral_force(mu * Fzf, alpha_f)
+Flr = get_longitudinal_force(mu * Fzr, slip_ratio_r)
+Fcr = get_lateral_force(mu * Fzr, alpha_r)
 
 Fxf = Flf * ca.cos(u) - Fcf * ca.sin(u)
 Fyf = Flf * ca.sin(u) + Fcf * ca.cos(u)
