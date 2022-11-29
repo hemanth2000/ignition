@@ -4,10 +4,8 @@ from utils.tiremodel import get_lateral_force, get_longitudinal_force
 
 # Simulation parameters
 t_step = 0.05  # Time step in seconds
-control_horizon = 3  # Control horizon : No of time steps optimal control is estimated
-prediction_horizon = 7  # Prediction window
-N = prediction_horizon
-
+Nc = 3  # Control horizon : No of time steps optimal control is estimated
+Np = 7  # Prediction window
 Q = ca.DM([[200, 0], [0, 75]])  # State weighing matrix
 R = 150  # Input weighing matrix
 
@@ -44,8 +42,8 @@ vcr = vyf  # rear wheel lateral velocity
 
 alpha_f = ca.atan(vcf / vlf)
 alpha_r = ca.atan(vcr / vlr)
-slip_ratio_f = 0.9
-slip_ratio_r = 0.9
+slip_ratio_f = 0  # Assumption
+slip_ratio_r = 0  # Assumption
 
 Flf = get_longitudinal_force(Fzf, slip_ratio_f)
 Fcf = get_lateral_force(Fzf, alpha_f)
@@ -85,13 +83,18 @@ g = []
 lbg = []
 ubg = []
 
+# Limits
+delta_max = 10
+delta_dot_max = 0.85
+
 # Formulate the NLP
-for k in range(N):
-    Uk = ca.SX.sym("U_" + str(k))
-    w += [Uk]
-    lbw += [-ca.pi / 18]
-    ubw += [ca.pi / 18]
-    w0 += [0]
+for k in range(Np):
+    if k < Nc:
+        Uk = ca.SX.sym("U_" + str(k))
+        w += [Uk]
+        lbw += [-delta_max]
+        ubw += [delta_max]
+        w0 += [0]
 
     Fk = F(x0=Xk, p=Uk)
     Xk = Fk["xf"]
@@ -112,11 +115,11 @@ w_opt = sol["x"]
 # Plotting
 u_opt = w_opt
 x_opt = [[]]
-for k in range(N):
+for k in range(Np):
     Fk = F(x0=x_opt[-1], p=u_opt[k])
     x_opt += [Fk["xf"].full()]
 
-tgrid = [t_step * k for k in range(N + 1)]
+tgrid = [t_step * k for k in range(Np + 1)]
 plt.figure()
 plt.clf()
 plt.plot()
