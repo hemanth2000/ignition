@@ -1,13 +1,17 @@
 import casadi as ca
 import matplotlib.pyplot as plt
 from utils.tiremodel import get_lateral_force, get_longitudinal_force
+from utils.trajectory import get_ref_trajectory
+from utils.utils import DM2Arr
 
 # Simulation parameters
 t_step = 0.05  # Time step in seconds
 Nc = 3  # Control horizon : No of time steps optimal control is estimated
 Np = 7  # Prediction window
-Q = ca.DM([[200, 0], [0, 75]])  # State weighing matrix
+Q = ca.diagcat(200, 75)  # State weighing matrix
 R = 150  # Input weighing matrix
+speed = 10
+PSI = ca.DM([[0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 1]])
 
 # Vehicle parameters
 a = 0.3  # Distance between front wheel and COM in meters
@@ -66,28 +70,28 @@ xdot = ca.vertcat(
     x1 * ca.sin(x3) + x2 * ca.cos(x3),
 )
 
-# Objective function
-L = 1
+f = ca.Function("f", [x, u], [xdot])
 
-# Distrete time dynamics
-dae = {"x": x, "p": u, "ode": xdot, "quad": L}
-opts = {"tf": t_step}
-F = ca.integrator("F", "cvodes", dae, opts)
+X = ca.SX.sym("X", 6)
+P = ca.SX.sym("P", 8)
 
 # Defining variables for NLP
-w = []
-w0 = []
-lbw = []
-ubw = []
 J = 0
 g = []
-lbg = []
-ubg = []
+
+st = X
 
 # Limits
 delta_max = 10
 delta_dot_max = 0.85
 
+w = []
+lbw = []
+ubw = []
+w0 = []
+
+# # references
+# _, Y_ref, phi_ref = get_ref_trajectory(speed, t_step, Np * t_step)
 # Formulate the NLP
 for k in range(Np):
     if k < Nc:
@@ -96,36 +100,36 @@ for k in range(Np):
         lbw += [-delta_max]
         ubw += [delta_max]
         w0 += [0]
-
-    Fk = F(x0=Xk, p=Uk)
-    Xk = Fk["xf"]
-    J += Fk["qf"]
-
-    g += [Xk]
-    lbg += []
-    ubg += []
+    J += (ca.vertcat(st[2], st[5]) - P[6:]).T @ Q @ (ca.vertcat(st[2], st[5]) - P[6:]) + Uk.T @ R @ Uk
+    k1 = f(st, Uk)
+    k2 = f(st + t_step / 2 * k1, Uk)
+    k3 = f(st + t_step / 2 * k2, Uk)
+    k4 = f(st + t_step / 2 * k3, Uk)
+    st = st + (t_step / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
 
 # Create an NLP solver
 prob = {"f": J, "x": ca.vertcat(*w), "g": ca.vertcat(*g)}
 solver = ca.nlpsol("solver", "ipopt", prob)
-
+ca.lookupvector
 # Solve the NLP
-sol = solver(x0=w0, lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
+sol = solver(x0=w0, lbx=lbw, ubx=ubw, lbg=[-ca.inf], ubg=[ca.inf])
 w_opt = sol["x"]
 
 # Plotting
 u_opt = w_opt
-x_opt = [[]]
+print(u_opt)
+x_opt = [[0, 0, 0, 0, 0, 0]]
 for k in range(Np):
     Fk = F(x0=x_opt[-1], p=u_opt[k])
     x_opt += [Fk["xf"].full()]
+    print(x_opt)
 
-tgrid = [t_step * k for k in range(Np + 1)]
-plt.figure()
-plt.clf()
-plt.plot()
-plt.plot()
-plt.xlabel("t")
-plt.ylabel()
-plt.grid()
-plt.show()
+# tgrid = [t_step * k for k in range(Np + 1)]
+# plt.figure()
+# plt.clf()
+# plt.plot()
+# plt.plot()
+# plt.xlabel("t")
+# plt.ylabel()
+# plt.grid()
+# plt.show()
