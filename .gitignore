@@ -4,5 +4,8 @@
 # reference papers
 papers
 
+# tests
+tests
+
 # cache files
 __pycache__

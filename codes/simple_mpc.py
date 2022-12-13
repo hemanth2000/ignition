@@ -6,12 +6,11 @@ from utils.utils import DM2Arr
 
 # Simulation parameters
 t_step = 0.05  # Time step in seconds
-Nc = 3  # Control horizon : No of time steps optimal control is estimated
+Nc = 6  # Control horizon : No of time steps optimal control is estimated
 Np = 7  # Prediction window
 Q = ca.diagcat(200, 75)  # State weighing matrix
 R = 150  # Input weighing matrix
 speed = 10
-PSI = ca.DM([[0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 1]])
 
 # Vehicle parameters
 a = 0.3  # Distance between front wheel and COM in meters
@@ -34,6 +33,8 @@ x6 = ca.SX.sym("Y")
 
 x = ca.vertcat(x1, x2, x3, x4, x5, x6)  # input vector
 u = ca.SX.sym("delta")  # front steering angle
+
+PSI = ca.DM([[0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 1]])  # output vector matrix
 
 vxf = x1  # front wheel velocity in x direction
 vyf = x2 + a * x4  # front wheel velocity in y direction
@@ -72,14 +73,22 @@ xdot = ca.vertcat(
 
 f = ca.Function("f", [x, u], [xdot])
 
+# RK4
+k1 = f(x, u)
+k2 = f(x + t_step / 2 * k1, u)
+k3 = f(x + t_step / 2 * k2, u)
+k4 = f(x + t_step / 2 * k3, u)
+Xnext = x + (t_step / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
+
+F = ca.Function("F", [x, u], [Xnext])
+
 X = ca.SX.sym("X", 6)
 P = ca.SX.sym("P", 8)
 
 # Defining variables for NLP
 J = 0
-g = []
 
-st = X
+st = P[:6]
 
 # Limits
 delta_max = 10
@@ -89,6 +98,9 @@ w = []
 lbw = []
 ubw = []
 w0 = []
+g = []
+lbg = [-ca.inf for _ in range(6 * Np)]
+ubg = [ca.inf for _ in range(6 * Np)]
 
 # # references
 # _, Y_ref, phi_ref = get_ref_trajectory(speed, t_step, Np * t_step)
@@ -100,29 +112,27 @@ for k in range(Np):
         lbw += [-delta_max]
         ubw += [delta_max]
         w0 += [0]
-    J += (ca.vertcat(st[2], st[5]) - P[6:]).T @ Q @ (ca.vertcat(st[2], st[5]) - P[6:]) + Uk.T @ R @ Uk
-    k1 = f(st, Uk)
-    k2 = f(st + t_step / 2 * k1, Uk)
-    k3 = f(st + t_step / 2 * k2, Uk)
-    k4 = f(st + t_step / 2 * k3, Uk)
-    st = st + (t_step / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
+    J += (PSI @ st - P[6:]).T @ Q @ (PSI @ st - P[6:]) + Uk.T @ R @ Uk
+    st = F(st, Uk)
+    assert st.shape == (6, 1)
+    g = ca.vertcat(g, st)
 
 # Create an NLP solver
-prob = {"f": J, "x": ca.vertcat(*w), "g": ca.vertcat(*g)}
+prob = {"f": J, "x": ca.vertcat(*w), "g": g, "p": P}
 solver = ca.nlpsol("solver", "ipopt", prob)
-ca.lookupvector
+
 # Solve the NLP
-sol = solver(x0=w0, lbx=lbw, ubx=ubw, lbg=[-ca.inf], ubg=[ca.inf])
+sol = solver(x0=w0, lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
 w_opt = sol["x"]
 
 # Plotting
 u_opt = w_opt
 print(u_opt)
 x_opt = [[0, 0, 0, 0, 0, 0]]
-for k in range(Np):
-    Fk = F(x0=x_opt[-1], p=u_opt[k])
-    x_opt += [Fk["xf"].full()]
-    print(x_opt)
+for k in range(Nc):
+    Fk = F(x_opt[-1], u_opt[k])
+    print(Fk)
+    x_opt += [Fk.full()]
 
 # tgrid = [t_step * k for k in range(Np + 1)]
 # plt.figure()
