@@ -82,9 +82,7 @@ Xnext = x + (t_step / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
 
 F = ca.Function("F", [x, u], [Xnext])
 
-X = ca.SX.sym("X", 6)
 P = ca.SX.sym("P", 8)
-
 # Defining variables for NLP
 J = 0
 
@@ -122,7 +120,8 @@ prob = {"f": J, "x": ca.vertcat(*w), "g": g, "p": P}
 solver = ca.nlpsol("solver", "ipopt", prob)
 
 # Solve the NLP
-sol = solver(x0=w0, lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
+sol = solver(x0=w0, p=[0, 0, 0, 0, 0, 0, 1, 5], lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
+print(sol)
 w_opt = sol["x"]
 
 # Plotting
