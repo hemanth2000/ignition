@@ -10,7 +10,7 @@ Nc = 6  # Control horizon : No of time steps optimal control is estimated
 Np = 7  # Prediction window
 Q = ca.diagcat(200, 75)  # State weighing matrix
 R = 150  # Input weighing matrix
-speed = 10
+speed = 5
 
 # Vehicle parameters
 a = 0.3  # Distance between front wheel and COM in meters
@@ -46,8 +46,8 @@ vlr = vxf  # rear wheel longitudinal velocity
 vcf = vyf * ca.cos(u) - vxf * ca.sin(u)  # front wheel lateral velocity
 vcr = vyf  # rear wheel lateral velocity
 
-alpha_f = ca.atan(vcf / vlf)
-alpha_r = ca.atan(vcr / vlr)
+alpha_f = ca.if_else(vcf == 0, vcf, ca.atan(vcf / vlf))
+alpha_r = ca.if_else(vcr == 0, vcr, ca.atan(vcr / vlr))
 slip_ratio_f = 0  # Assumption
 slip_ratio_r = 0  # Assumption
 
@@ -119,26 +119,25 @@ for k in range(Np):
 prob = {"f": J, "x": ca.vertcat(*w), "g": g, "p": P}
 solver = ca.nlpsol("solver", "ipopt", prob)
 
-# Solve the NLP
-sol = solver(x0=w0, p=[0, 0, 0, 0, 0, 0, 1, 5], lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
-print(sol)
-w_opt = sol["x"]
-
-# Plotting
-u_opt = w_opt
-print(u_opt)
-x_opt = [[0, 0, 0, 0, 0, 0]]
-for k in range(Nc):
-    Fk = F(x_opt[-1], u_opt[k])
-    print(Fk)
-    x_opt += [Fk.full()]
-
-# tgrid = [t_step * k for k in range(Np + 1)]
-# plt.figure()
-# plt.clf()
-# plt.plot()
-# plt.plot()
-# plt.xlabel("t")
-# plt.ylabel()
-# plt.grid()
-# plt.show()
+if __name__ == "__main__":
+    # Solve the NLP
+    sol = solver(x0=w0, p=[0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 1, 5], lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
+    print(sol)
+    w_opt = sol["x"]
+    # Plotting
+    u_opt = w_opt
+    print(u_opt)
+    x_opt = [[0.1, 0.1, 0.1, 0.1, 0.1, 0.1]]
+    for k in range(Nc):
+        Fk = F(x_opt[-1], u_opt[k])
+        print(Fk)
+        x_opt += [Fk.full()]
+    # tgrid = [t_step * k for k in range(Np + 1)]
+    # plt.figure()
+    # plt.clf()
+    # plt.plot()
+    # plt.plot()
+    # plt.xlabel("t")
+    # plt.ylabel()
+    # plt.grid()
+    # plt.show()
