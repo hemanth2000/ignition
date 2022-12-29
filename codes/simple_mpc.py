@@ -97,8 +97,8 @@ lbw = []
 ubw = []
 w0 = []
 g = []
-lbg = [-ca.inf for _ in range(6 * Np)]
-ubg = [ca.inf for _ in range(6 * Np)]
+lbg = []
+ubg = []
 
 # # references
 # _, Y_ref, phi_ref = get_ref_trajectory(speed, t_step, Np * t_step)
@@ -114,6 +114,8 @@ for k in range(Np):
     st = F(st, Uk)
     assert st.shape == (6, 1)
     g = ca.vertcat(g, st)
+    lbg += [-ca.inf, -ca.inf, -ca.inf, -ca.inf, 0, 0]
+    ubg += [ca.inf for _ in range(6)]
 
 # Create an NLP solver
 prob = {"f": J, "x": ca.vertcat(*w), "g": g, "p": P}
